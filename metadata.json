@@ -1,0 +1,7 @@
+{
+  "name": "Medisync Hospital Admin Dashboard",
+  "description": "A high-performance, real-time hospital resource management system built with React, Tailwind CSS, and Supabase. Features include bed tracking, patient booking management, medicine inventory with threshold alerts, and secure role-based access.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
