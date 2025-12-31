@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Medicine } from '../types';
@@ -8,7 +9,6 @@ import {
   Edit3, 
   AlertCircle, 
   CheckCircle2,
-  RefreshCw,
   Search,
   X,
   Save
@@ -20,11 +20,13 @@ const MedicineInventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentMed, setCurrentMed] = useState<Partial<Medicine>>({
+  
+  // Initial state uses empty strings/undefined for numbers to allow placeholders to show
+  const [currentMed, setCurrentMed] = useState<any>({
     medicine_name: '',
     serial_number: '',
-    quantity: 0,
-    threshold_quantity: 5
+    quantity: '',
+    threshold_quantity: ''
   });
 
   useEffect(() => {
@@ -53,10 +55,22 @@ const MedicineInventory: React.FC = () => {
   };
 
   const handleSave = async () => {
+    // Basic validation
+    if (!currentMed.medicine_name || !currentMed.serial_number) {
+      alert("Please fill in the required medicine details.");
+      return;
+    }
+
+    const payload = {
+      ...currentMed,
+      quantity: parseInt(currentMed.quantity) || 0,
+      threshold_quantity: parseInt(currentMed.threshold_quantity) || 0
+    };
+
     if (isEditing && currentMed.medicine_id) {
-      await supabase.from('Medicine').update(currentMed).eq('medicine_id', currentMed.medicine_id);
+      await supabase.from('Medicine').update(payload).eq('medicine_id', currentMed.medicine_id);
     } else {
-      await supabase.from('Medicine').insert([currentMed]);
+      await supabase.from('Medicine').insert([payload]);
     }
     setShowModal(false);
     fetchMedicines();
@@ -75,25 +89,29 @@ const MedicineInventory: React.FC = () => {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-black text-slate-900">Medical Inventory</h2>
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-1">Pharmacy Control Unit</p>
+          <p className="text-slate-500 font-black uppercase tracking-widest text-[10px] mt-1">Pharmacy Control Unit</p>
         </div>
-        <div className="flex space-x-3">
-          <div className="relative w-64">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
               placeholder="Search Items..." 
-              className="pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl w-full outline-none focus:ring-4 focus:ring-blue-50 font-bold text-slate-800"
+              className="pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl w-full outline-none focus:ring-4 focus:ring-blue-100 font-bold text-slate-900"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <button 
-            onClick={() => { setIsEditing(false); setCurrentMed({ medicine_name: '', serial_number: '', quantity: 0, threshold_quantity: 5 }); setShowModal(true); }}
+            onClick={() => { 
+              setIsEditing(false); 
+              setCurrentMed({ medicine_name: '', serial_number: '', quantity: '', threshold_quantity: '' }); 
+              setShowModal(true); 
+            }}
             className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-black shadow-2xl shadow-blue-100 transition-all active:scale-95"
           >
             <Plus size={20} />
@@ -139,7 +157,7 @@ const MedicineInventory: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-10 py-6">
-                      <div className="flex items-center justify-center space-x-6 bg-slate-50 w-fit mx-auto p-2 rounded-2xl border border-slate-100">
+                      <div className="flex items-center justify-center space-x-6 bg-slate-100 w-fit mx-auto p-2 rounded-2xl border border-slate-200 shadow-inner">
                         <button 
                           onClick={() => updateQuantity(med.medicine_id, med.quantity, -1)}
                           className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl hover:bg-rose-50 hover:text-rose-600 font-black text-lg transition-all"
@@ -187,54 +205,78 @@ const MedicineInventory: React.FC = () => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl animate-in fade-in zoom-in duration-300">
-            <h2 className="text-3xl font-black text-slate-900 mb-8">{isEditing ? 'Edit Item' : 'Register New Item'}</h2>
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl animate-in fade-in zoom-in duration-300 border border-slate-100">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-3xl font-black text-slate-900">{isEditing ? 'Update Stock' : 'Register Medicine'}</h2>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Medical Record Management</p>
+              </div>
+              <button onClick={() => setShowModal(false)} className="p-3 hover:bg-slate-100 text-slate-400 hover:text-slate-900 rounded-2xl transition-all"><X size={24} /></button>
+            </div>
+
             <div className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Item Name</label>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Medicine Brand Name</label>
                 <input 
                   type="text" 
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-slate-800"
+                  autoFocus
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-bold text-slate-900 placeholder:text-slate-300 placeholder:font-medium"
+                  placeholder="e.g. Paracetamol 500mg"
                   value={currentMed.medicine_name || ''}
                   onChange={(e) => setCurrentMed({...currentMed, medicine_name: e.target.value})}
                 />
               </div>
+              
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Serial / Batch #</label>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Serial / Batch Number</label>
                 <input 
                   type="text" 
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold"
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-bold text-slate-900 placeholder:text-slate-300 placeholder:font-medium"
+                  placeholder="MED000"
                   value={currentMed.serial_number || ''}
                   onChange={(e) => setCurrentMed({...currentMed, serial_number: e.target.value})}
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Current Qty</label>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Opening Stock</label>
                   <input 
                     type="number" 
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold"
-                    value={currentMed.quantity || 0}
-                    onChange={(e) => setCurrentMed({...currentMed, quantity: parseInt(e.target.value)})}
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-bold text-slate-900 placeholder:text-slate-300 placeholder:font-medium"
+                    placeholder="e.g. 100"
+                    value={currentMed.quantity}
+                    onChange={(e) => setCurrentMed({...currentMed, quantity: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Safety Threshold</label>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Safety Threshold</label>
                   <input 
                     type="number" 
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold"
-                    value={currentMed.threshold_quantity || 0}
-                    onChange={(e) => setCurrentMed({...currentMed, threshold_quantity: parseInt(e.target.value)})}
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-bold text-slate-900 placeholder:text-slate-300 placeholder:font-medium"
+                    placeholder="e.g. 10"
+                    value={currentMed.threshold_quantity}
+                    onChange={(e) => setCurrentMed({...currentMed, threshold_quantity: e.target.value})}
                   />
+                  <p className="text-[10px] text-slate-400 mt-2 font-bold italic px-1 leading-tight">Critical alerts triggered below this quantity</p>
                 </div>
               </div>
             </div>
+
             <div className="flex space-x-4 mt-12">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-4 font-black text-slate-500 hover:bg-slate-100 rounded-[20px]">Discard</button>
-              <button onClick={handleSave} className="flex-1 py-4 font-black bg-blue-600 text-white rounded-[20px] shadow-2xl shadow-blue-100 flex items-center justify-center space-x-2">
+              <button 
+                onClick={() => setShowModal(false)} 
+                className="flex-1 py-5 font-black text-slate-500 hover:bg-slate-50 rounded-[24px] transition-all border border-transparent hover:border-slate-100"
+              >
+                Discard
+              </button>
+              <button 
+                onClick={handleSave} 
+                className="flex-1 py-5 font-black bg-blue-600 text-white rounded-[24px] shadow-2xl shadow-blue-100 flex items-center justify-center space-x-2 hover:bg-blue-700 transition-all active:scale-95"
+              >
                 <Save size={20} />
-                <span>{isEditing ? 'Update Stock' : 'Create Record'}</span>
+                <span>{isEditing ? 'Save Changes' : 'Confirm Entry'}</span>
               </button>
             </div>
           </div>

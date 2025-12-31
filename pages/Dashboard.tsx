@@ -83,8 +83,9 @@ const Dashboard: React.FC = () => {
       setStats({
         totalRooms: roomsCount || 0,
         totalBeds: beds.length,
-        occupiedBeds: beds.filter(b => b.status === 'Occupied').length,
-        availableBeds: beds.filter(b => b.status === 'Available').length,
+        // Use case-insensitive matching for statuses like 'AVAILABLE' or 'Available'
+        occupiedBeds: beds.filter(b => (b.status || '').toUpperCase() === 'OCCUPIED').length,
+        availableBeds: beds.filter(b => (b.status || '').toUpperCase() === 'AVAILABLE').length,
         pastBookings: past,
         activeBookings: active,
         futureBookings: future,

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Bed as BedType, Room } from '../types';
@@ -29,13 +30,15 @@ const RoomManagement: React.FC = () => {
   };
 
   const updateBedStatus = async (bedId: string, newStatus: string) => {
+    // Send status as uppercase to match your database schema ('AVAILABLE', 'OCCUPIED', etc.)
+    const statusToUpdate = newStatus.toUpperCase();
     const { error } = await supabase
       .from('Bed')
-      .update({ status: newStatus })
+      .update({ status: statusToUpdate })
       .eq('bed_id', bedId);
     
     if (!error) {
-      setBeds(prev => prev.map(b => b.bed_id === bedId ? { ...b, status: newStatus as any } : b));
+      setBeds(prev => prev.map(b => b.bed_id === bedId ? { ...b, status: statusToUpdate as any } : b));
     }
   };
 
@@ -47,7 +50,6 @@ const RoomManagement: React.FC = () => {
   };
 
   const filteredBeds = beds.filter(bed => {
-    // Robust normalization for filtering
     const bedStatus = (bed.status || '').toLowerCase();
     const activeFilter = filterStatus.toLowerCase();
     
@@ -115,64 +117,67 @@ const RoomManagement: React.FC = () => {
             <p className="text-slate-400 font-bold text-xl uppercase tracking-widest">No matching units</p>
           </div>
         ) : (
-          filteredBeds.map(bed => (
-            <div key={bed.bed_id} className="bg-white border border-slate-200 rounded-[32px] overflow-hidden group hover:shadow-2xl transition-all duration-500 relative">
-              <div className="h-48 bg-slate-100 relative overflow-hidden flex items-center justify-center">
-                <img 
-                  src={bed.image_url || BED_PLACEHOLDER} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                  alt="Hospital Bed"
-                />
-                <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg ${
-                  bed.status.toLowerCase() === 'available' ? 'bg-emerald-500 text-white' :
-                  bed.status.toLowerCase() === 'occupied' ? 'bg-blue-600 text-white' :
-                  'bg-rose-600 text-white'
-                }`}>
-                  {bed.status}
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h4 className="font-black text-slate-900 text-lg leading-none">Unit {bed.bed_number}</h4>
-                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase">Room {bed.room_number}</p>
+          filteredBeds.map(bed => {
+            const statusLower = (bed.status || '').toLowerCase();
+            return (
+              <div key={bed.bed_id} className="bg-white border border-slate-200 rounded-[32px] overflow-hidden group hover:shadow-2xl transition-all duration-500 relative">
+                <div className="h-48 bg-slate-100 relative overflow-hidden flex items-center justify-center">
+                  <img 
+                    src={bed.image_url || BED_PLACEHOLDER} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                    alt="Hospital Bed"
+                  />
+                  <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg ${
+                    statusLower === 'available' ? 'bg-emerald-500 text-white' :
+                    statusLower === 'occupied' ? 'bg-blue-600 text-white' :
+                    'bg-rose-600 text-white'
+                  }`}>
+                    {bed.status}
                   </div>
-                  <button 
-                    onClick={() => deleteBed(bed.bed_id)}
-                    className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                  >
-                    <Trash2 size={16} />
-                  </button>
                 </div>
-
-                <div className="bg-slate-50 rounded-2xl p-4 mb-6 min-h-[60px] flex items-center">
-                  {bed.patient_name ? (
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Patient</p>
-                      <p className="text-sm font-bold text-slate-800 line-clamp-1">{bed.patient_name}</p>
+                      <h4 className="font-black text-slate-900 text-lg leading-none">Unit {bed.bed_number}</h4>
+                      <p className="text-xs font-bold text-slate-400 mt-1 uppercase">Room {bed.room_number}</p>
                     </div>
-                  ) : (
-                    <p className="text-xs font-bold text-slate-300 italic uppercase">Unoccupied</p>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-3 gap-2">
-                  <button 
-                    onClick={() => updateBedStatus(bed.bed_id, 'Available')}
-                    className={`p-3 rounded-2xl flex items-center justify-center transition-all ${bed.status.toLowerCase() === 'available' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-emerald-50'}`}
-                  ><CheckCircle size={20} /></button>
-                  <button 
-                    onClick={() => updateBedStatus(bed.bed_id, 'Occupied')}
-                    className={`p-3 rounded-2xl flex items-center justify-center transition-all ${bed.status.toLowerCase() === 'occupied' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-blue-50'}`}
-                  ><Clock size={20} /></button>
-                  <button 
-                    onClick={() => updateBedStatus(bed.bed_id, 'Under Maintenance')}
-                    className={`p-3 rounded-2xl flex items-center justify-center transition-all ${bed.status.toLowerCase() === 'under maintenance' ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-rose-50'}`}
-                  ><AlertCircle size={20} /></button>
+                    <button 
+                      onClick={() => deleteBed(bed.bed_id)}
+                      className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-4 mb-6 min-h-[60px] flex items-center">
+                    {bed.patient_name ? (
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Patient</p>
+                        <p className="text-sm font-bold text-slate-800 line-clamp-1">{bed.patient_name}</p>
+                      </div>
+                    ) : (
+                      <p className="text-xs font-bold text-slate-300 italic uppercase">Unoccupied</p>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2">
+                    <button 
+                      onClick={() => updateBedStatus(bed.bed_id, 'AVAILABLE')}
+                      className={`p-3 rounded-2xl flex items-center justify-center transition-all ${statusLower === 'available' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-emerald-50'}`}
+                    ><CheckCircle size={20} /></button>
+                    <button 
+                      onClick={() => updateBedStatus(bed.bed_id, 'OCCUPIED')}
+                      className={`p-3 rounded-2xl flex items-center justify-center transition-all ${statusLower === 'occupied' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-blue-50'}`}
+                    ><Clock size={20} /></button>
+                    <button 
+                      onClick={() => updateBedStatus(bed.bed_id, 'UNDER MAINTENANCE')}
+                      className={`p-3 rounded-2xl flex items-center justify-center transition-all ${statusLower === 'under maintenance' ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-rose-50'}`}
+                    ><AlertCircle size={20} /></button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
