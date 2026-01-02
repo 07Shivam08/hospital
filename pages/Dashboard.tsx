@@ -78,6 +78,15 @@ const Dashboard: React.FC = () => {
     setOrders(data || []);
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-medium animate-pulse">Synchronizing Hospital Systems...</p>
+      </div>
+    );
+  }
+
   const occupancyData = [
     { name: 'Occupied', value: stats.occupiedBeds, color: '#2563eb' },
     { name: 'Available', value: stats.availableBeds, color: '#10b981' },
