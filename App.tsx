@@ -10,92 +10,37 @@ import PatientManagement from './pages/PatientManagement';
 import MedicineInventory from './pages/MedicineInventory';
 import OrderManagement from './pages/OrderManagement';
 import { Session } from '@supabase/supabase-js';
-import { AlertCircle, RefreshCw, WifiOff } from 'lucide-react';
+import { Menu, X, LogOut, User, Activity } from 'lucide-react';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState('dashboard');
-  const [connectionTime, setConnectionTime] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-    console.log('Medisync: App Initializing...');
-
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (mounted) {
-          if (error) throw error;
-          setSession(session);
-          setLoading(false);
-          console.log('Medisync: Auth connected.');
-        }
-      } catch (err) {
-        console.error('Medisync: Auth Error', err);
-        if (mounted) setLoading(false);
-      }
-    };
-
-    checkSession();
+    // Initial Session Check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    }).catch(() => setLoading(false));
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Medisync: Auth Event -', _event);
-      if (mounted) {
-        setSession(session);
-        setLoading(false);
-      }
+      setSession(session);
+      setLoading(false);
+      // Close sidebar on login/logout
+      setIsSidebarOpen(false);
     });
 
-    // Track time for slow connection warning
-    const timer = setInterval(() => {
-      setConnectionTime(prev => prev + 1);
-    }, 1000);
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-      clearInterval(timer);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-white p-10 text-center">
-        <div className="relative mb-8">
-          <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-blue-600 border-r-4 border-r-blue-100"></div>
-          {connectionTime > 8 && (
-            <div className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 shadow-lg animate-bounce">
-              <WifiOff size={20} />
-            </div>
-          )}
-        </div>
-        
-        <h2 className="text-2xl font-black text-slate-800 mb-3">
-          {connectionTime > 8 ? 'Slow Connection Detected' : 'Connecting to Medisync'}
-        </h2>
-        
-        <p className="text-slate-500 max-w-sm mx-auto mb-10 text-sm leading-relaxed">
-          {connectionTime > 8 
-            ? 'We are having difficulty reaching the database at bjcgrmjtxdkonkoixkup.supabase.co. Please check your network.' 
-            : 'Synchronizing with hospital administrative records...'}
-        </p>
-
-        {connectionTime > 8 && (
-          <div className="space-y-4">
-            <button 
-              onClick={() => window.location.reload()}
-              className="flex items-center justify-center space-x-2 w-full px-8 py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100"
-            >
-              <RefreshCw size={20} />
-              <span>Retry Connection</span>
-            </button>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              Project ID: bjcgrmjtxdkonkoixkup
-            </p>
-          </div>
-        )}
+      <div className="flex flex-col items-center justify-center h-screen bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 border-solid mb-4"></div>
+        <p className="text-slate-500 font-bold animate-pulse uppercase tracking-widest text-xs">Synchronizing Medisync...</p>
       </div>
     );
   }
@@ -118,28 +63,65 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      <Sidebar activePage={activePage} onPageChange={setActivePage} />
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <header className="flex justify-between items-center mb-10 max-w-7xl mx-auto">
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 capitalize tracking-tight">{activePage}</h1>
-            <p className="text-slate-500 font-medium">Administrator Panel v1.0</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-slate-800">{session.user.email}</p>
-              <p className="text-[10px] font-black text-green-600 uppercase">System Active</p>
+      {/* Sidebar - Desktop & Mobile */}
+      <Sidebar 
+        activePage={activePage} 
+        onPageChange={(page) => {
+          setActivePage(page);
+          setIsSidebarOpen(false); // Close on mobile navigation
+        }} 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto relative">
+        {/* Mobile Header Overlay */}
+        <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-4 md:px-8 md:py-6">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 md:hidden hover:bg-slate-100 rounded-xl transition-colors text-slate-600"
+              >
+                <Menu size={24} />
+              </button>
+              <div className="hidden md:block">
+                <h1 className="text-2xl font-black text-slate-900 capitalize tracking-tight">{activePage}</h1>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Hospital Admin Panel</p>
+              </div>
+              <div className="md:hidden flex items-center gap-2">
+                 <div className="p-1.5 bg-blue-600 rounded-lg">
+                    <Activity size={18} className="text-white" />
+                 </div>
+                 <span className="font-black text-slate-900 text-lg">Medisync</span>
+              </div>
             </div>
-            <button 
-              onClick={() => supabase.auth.signOut()}
-              className="px-5 py-2.5 bg-white border-2 border-slate-100 text-slate-600 rounded-xl font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all shadow-sm"
-            >
-              Log Out
-            </button>
+
+            <div className="flex items-center space-x-3">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-black text-slate-900 truncate max-w-[150px]">{session.user.email}</p>
+                <div className="flex items-center justify-end space-x-1">
+                   <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                   <p className="text-[10px] font-black text-green-600 uppercase tracking-tighter">Active Session</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => supabase.auth.signOut()}
+                className="p-2.5 md:px-5 md:py-2.5 bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 rounded-xl transition-all shadow-sm group"
+                title="Log Out"
+              >
+                <LogOut size={20} className="md:hidden" />
+                <span className="hidden md:block font-bold text-sm">Log Out</span>
+              </button>
+            </div>
           </div>
         </header>
-        <div className="max-w-7xl mx-auto">
-          {renderContent()}
+
+        <div className="p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            {renderContent()}
+          </div>
         </div>
       </main>
     </div>
