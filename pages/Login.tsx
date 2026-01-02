@@ -1,9 +1,12 @@
 
 import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
 import { Activity, Mail, Lock, AlertCircle } from 'lucide-react';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  onLogin: () => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,34 +16,20 @@ const Login: React.FC = () => {
   const ADMIN_EMAIL = 'admin@medisync.com';
   const ADMIN_PASSWORD = 'admin@medisync';
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // 1. First, check the local hardcoded credentials
+    // Check the local hardcoded credentials
     if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
       setError("Incorrect email or password for administrator access.");
       setLoading(false);
       return;
     }
 
-    // 2. Then, attempt to authenticate with Supabase Auth
-    // NOTE: The user 'admin@medisync.com' must be manually created in your Supabase Auth dashboard!
-    const { error: authError, data } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (authError) {
-      console.error('Supabase Auth Error:', authError);
-      // Helpful error for developers if they forgot to create the user in Supabase
-      if (authError.message.includes("Invalid login credentials")) {
-        setError("Admin verified locally, but this user does not exist in Supabase Auth. Please create user 'admin@medisync.com' in your Supabase project's Authentication tab.");
-      } else {
-        setError(authError.message);
-      }
-    } else {
-      console.log('Login successful!', data.session);
-    }
-    
+    // Login successful - call the onLogin callback
+    onLogin();
     setLoading(false);
   };
 

@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import React, { useState } from 'react';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Sidebar from './components/Sidebar';
@@ -9,44 +8,28 @@ import BookingManagement from './pages/BookingManagement';
 import PatientManagement from './pages/PatientManagement';
 import MedicineInventory from './pages/MedicineInventory';
 import OrderManagement from './pages/OrderManagement';
-import { Session } from '@supabase/supabase-js';
 import { Menu, X, LogOut, User, Activity } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('isLoggedIn') === 'true';
+  });
   const [activePage, setActivePage] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    // Initial Session Check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+  const handleLogin = () => {
+    localStorage.setItem('isLoggedIn', 'true');
+    setIsLoggedIn(true);
+  };
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-      // Close sidebar on login/logout
-      setIsSidebarOpen(false);
-    });
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    setIsLoggedIn(false);
+    setIsSidebarOpen(false);
+  };
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 border-solid mb-4"></div>
-        <p className="text-slate-500 font-bold animate-pulse uppercase tracking-widest text-xs">Synchronizing Medisync...</p>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <Login />;
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLogin} />;
   }
 
   const renderContent = () => {
@@ -100,14 +83,14 @@ const App: React.FC = () => {
 
             <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-black text-slate-900 truncate max-w-[150px]">{session.user.email}</p>
+                <p className="text-xs font-black text-slate-900 truncate max-w-[150px]">admin@medisync.com</p>
                 <div className="flex items-center justify-end space-x-1">
                    <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
                    <p className="text-[10px] font-black text-green-600 uppercase tracking-tighter">Active Session</p>
                 </div>
               </div>
               <button 
-                onClick={() => supabase.auth.signOut()}
+                onClick={handleLogout}
                 className="p-2.5 md:px-5 md:py-2.5 bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 rounded-xl transition-all shadow-sm group"
                 title="Log Out"
               >
